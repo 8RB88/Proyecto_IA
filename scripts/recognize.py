@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 import tkinter as tk
 from tkinter import simpledialog
+import re
 
 import cv2
 import face_recognition
@@ -18,6 +19,17 @@ MODEL = "hog"  # "hog" rapido CPU; "cnn" requiere GPU/CUDA
 DOWNSCALE = 0.75  # 1.0 sin cambio; 0.5 reduce a mitad para mas FPS
 TOLERANCE = 0.45  # menor = mas estricto; mayor = mas permisivo
 CAPTURE_COUNT = 5  # Numero de fotos a capturar al aprender
+
+
+def normalize_name(name: str) -> str:
+    """Normaliza un nombre removiendo caracteres especiales y espacios."""
+    # Reemplazar espacios y caracteres especiales con guiones bajos
+    normalized = re.sub(r'[^\w]', '_', name)
+    # Remover guiones bajos múltiples consecutivos
+    normalized = re.sub(r'_+', '_', normalized)
+    # Remover guiones bajos al inicio y final
+    normalized = normalized.strip('_')
+    return normalized
 
 
 def load_encodings():
@@ -36,7 +48,9 @@ def save_encodings(encodings, names):
 def save_face_image(frame, box, label):
     top, right, bottom, left = box
     face = frame[top:bottom, left:right]
-    dest_dir = TRAIN_DIR / label
+    # Normalizar el nombre de la carpeta
+    normalized_label = normalize_name(label)
+    dest_dir = TRAIN_DIR / normalized_label
     dest_dir.mkdir(parents=True, exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     out_path = dest_dir / f"{ts}.jpg"
