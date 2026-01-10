@@ -29,8 +29,11 @@ Este proyecto implementa un sistema de reconocimiento facial que:
 ### Tecnologías usadas
 - **`face_recognition`**: Librería de detección y encoding de rostros basada en deep learning
 - **`OpenCV (cv2)`**: Captura de video y procesamiento de imágenes
+- **`numpy`**: Procesamiento de arrays y manipulación de imágenes
 - **`pickle`**: Serialización de embeddings para almacenamiento
-- **Python 3.13**: Lenguaje base
+- **`tkinter`**: Interfaz gráfica para diálogos y mensajes
+- **`dlib-bin`**: Motor de detección facial (binario precompilado para Windows)
+- **Python 3.11**: Lenguaje base
 
 ---
 
@@ -54,7 +57,7 @@ Reconocimineto/
 │   ├── encode_faces.py             # Genera embeddings desde imágenes de entrenamiento
 │   └── recognize.py                # Reconoce rostros en tiempo real desde webcam
 │
-└── .venv/                          # Entorno virtual Python (no mostrado)
+└── .venv311/                      # Entorno virtual Python 3.11 (no mostrado)
 ```
 
 ### Detalles de carpetas
@@ -73,8 +76,8 @@ Reconocimineto/
 ### Dependencias Python
 ```
 face_recognition >= 1.3.0
-opencv-python (cv2)
-cmake
+ Windows 10+ (actualmente configurado)
+ Python 3.11 (recomendado) o versiones compatibles
 ```
 
 ### Hardware
@@ -82,6 +85,12 @@ cmake
 - CPU: Cualquier procesador moderno (para `hog`)
 - GPU (opcional): NVIDIA CUDA para modelo `cnn` (más rápido y preciso)
 
+### Paso 1️⃣: Navegar a la Carpeta del Proyecto
+
+Abre **PowerShell** y ve a la carpeta del proyecto:
+```powershell
+cd "C:\Users\busta\Desktop\proyectos propios\reconocimineto facial\Proyecto_IA"
+```
 ---
 
 ## 🚀 Instalación Completa
@@ -89,8 +98,16 @@ cmake
 ### PREREQUISITOS ANTES DE EMPEZAR
 
 #### ✅ Verificar Python Instalado
+### Paso 2️⃣: Crear y Activar el Entorno Virtual (Python 3.11)
+
+#### 2a. Crear el Entorno
+```powershell
+py -3.11 -m venv .venv311
+```
 Abre **PowerShell** o **CMD** y ejecuta:
 ```powershell
+
+**Qué hace:** Crea una carpeta `.venv311` con una copia aislada de Python 3.11 y sus librerías. Esto evita conflictos con otros proyectos.
 python --version
 ```
 
@@ -98,17 +115,30 @@ python --version
 
 **Si no aparece nada:**
 1. Descarga Python desde https://www.python.org/downloads/
+#### 2b. Activar el Entorno (OBLIGATORIO cada vez que trabajes)
+
+**En Windows PowerShell:**
+```powershell
+.\.venv311\Scripts\Activate.ps1
+```
 2. **IMPORTANTE:** Durante la instalación, marca la opción "Add Python to PATH"
 3. Reinicia PowerShell/CMD y vuelve a verificar
 
 #### ✅ Verificar Webcam Conectada
 - Abre **Configuración > Cámara** y verifica que la cámara aparezca en la lista
+**Si usas CMD (no PowerShell):**
+```cmd
+.venv311\Scripts\activate.bat
 - Abre **Configuración > Privacidad > Cámara** y habilita acceso
 
 ---
 
 ### Paso 1️⃣: Navegar a la Carpeta del Proyecto
 
+**Verificación:** Deberías ver `(.venv311)` al inicio de la línea en la terminal:
+```
+(.venv311) C:\Users\busta\Desktop\proyectos propios\reconocimineto facial\Proyecto_IA>
+```
 Abre **PowerShell** y ve a la carpeta del proyecto:
 ```powershell
 cd "C:\Users\busta\Desktop\proyectos propios\Reconocimineto"
@@ -118,16 +148,27 @@ Verifica que estés en el lugar correcto:
 ```powershell
 ls  # Deberías ver: README.md, data/, scripts/
 ```
+### Paso 3️⃣: Instalar Dependencias (sin compilar dlib)
+
+Con el entorno activado (ves `(.venv311)` en la terminal), ejecuta:
+
+```powershell
+pip install --upgrade pip setuptools wheel
+pip install dlib-bin==19.24.2
+pip install "numpy<2" opencv-python cmake
+pip install face_recognition --no-deps
+```
 
 ---
-
-### Paso 2️⃣: Crear y Activar el Entorno Virtual
-
 #### 2a. Crear el Entorno
 ```powershell
 python -m venv .venv
 ```
 
+**Prueba rápida de importación:**
+```powershell
+python -c "import cv2, face_recognition; print('✅ Todas las librerías instaladas correctamente')"
+```
 **Qué hace:** Crea una carpeta `.venv` con una copia aislada de Python y sus librerías. Esto evita conflictos con otros proyectos.
 
 **Tiempo aproximado:** 30-60 segundos
@@ -136,6 +177,7 @@ python -m venv .venv
 
 **En Windows PowerShell:**
 ```powershell
+python scripts/recognize.py
 .\.venv\Scripts\Activate.ps1
 ```
 
@@ -310,11 +352,62 @@ python scripts/recognize.py
 3. Los nombres aparecen encima de los rostros
 4. La terminal muestra instrucciones de controles
 
-**Controles:**
-- Presiona `q` para salir
-- Presiona `-` y `+` para ajustar sensibilidad
+**Controles principales:**
+- **`q`**: Salir de la aplicación
+- **`-` y `+`**: Ajustar tolerancia (sensibilidad de reconocimiento)
+- **`a`**: Aprender un nuevo rostro (captura desde múltiples ángulos)
+- **`r`**: Reforzar el modelo de una persona ya registrada (más fotos)
+
+**Controles durante entrenamiento (captura de fotos):**
+- **`ESC`**: Saltar el ángulo actual si cuesta mucho detectar rostro
+- **`q`**: Cancelar el entrenamiento
 
 **Éxito:** Si ves esto, ¡el sistema funciona! 🎉
+
+---
+
+## 🎓 Flujo de Aprendizaje Mejorado
+
+### Aprender un Nuevo Rostro (`a`)
+
+1. Presiona `a` en la ventana principal con el rostro visible
+2. Se abre un diálogo pidiendo el nombre de la persona
+3. El sistema verifica si el rostro **ya está registrado**:
+   - Si **SÍ**: Muestra un mensaje "Usuario Ya Registrado" y sugiere usar `r` para reforzar
+   - Si **NO**: Inicia la captura controlada
+
+4. Durante la captura, se piden fotos desde **5 ángulos diferentes**:
+   - 🟢 **Frente** (verde)
+   - 🟠 **Derecha** (naranja)
+   - 🟠 **Izquierda** (naranja)
+   - 🟣 **Arriba** (púrpura)
+   - 🟣 **Abajo** (púrpura)
+
+5. Para cada ángulo, el sistema:
+   - Muestra instrucciones grandes en pantalla
+   - Cuenta el progreso: `Foto X/5 | Ángulo Y/5`
+   - Espera **0.67 segundos** con rostro detectado antes de capturar
+   - Muestra `✓ Rostro OK` en verde si detecta, o `✗ Sin rostro` en rojo si no
+   - **Reintentos automáticos**: Si lleva 5 segundos sin detectar rostro, salta al siguiente ángulo
+   - Puedes presionar **ESC** para saltar manualmente un ángulo
+
+6. Después de capturar las fotos:
+   - Se reentrena el modelo automáticamente
+   - Se actualiza `known_encodings.pkl`
+   - La terminal muestra: `Guardadas X fotos para [nombre] y actualizado...`
+
+### Reforzar un Rostro Existente (`r`)
+
+1. Presiona `r` en la ventana principal con el rostro de la persona registrada visible
+2. Se verifica si el rostro está registrado:
+   - Si **NO**: Muestra un mensaje "Rostro no reconocido" y sugiere usar `a` para aprender
+   - Si **SÍ**: Abre un diálogo confirmando la persona detectada
+
+3. Confirma si deseas capturar más fotos (responde `s`, `si`, `yes` o `y`)
+
+4. Sigue el mismo flujo de captura de **5 ángulos** que en aprendizaje
+
+5. Se reentrena el modelo con las nuevas fotos, mejorando la precisión
 
 ---
 

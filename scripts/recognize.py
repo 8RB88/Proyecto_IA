@@ -1,11 +1,13 @@
 import pickle
 from datetime import datetime
 from pathlib import Path
+import numpy as np
 import tkinter as tk
 from tkinter import simpledialog
 
 import cv2
 import face_recognition
+from tkinter import messagebox
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 ENC_FILE = DATA_DIR / "known_encodings.pkl"
@@ -62,6 +64,135 @@ def rebuild_encodings_from_train():
     return encodings, names
 
 
+def capture_training_photos(video, label, capture_count=5):
+    """
+    Captura fotos controladas de múltiples ángulos con instrucciones visuales.
+    Pide al usuario que mire hacia: frente, derecha, izquierda, arriba, abajo.
+    Reintentas automáticamente si no detecta rostro.
+    """
+    angles = [
+        {"name": "Frente", "instruction": "Mira AL FRENTE", "color": (0, 255, 0)},
+        {"name": "Derecha", "instruction": "Gira a la DERECHA", "color": (255, 165, 0)},
+        {"name": "Izquierda", "instruction": "Gira a la IZQUIERDA", "color": (255, 165, 0)},
+        {"name": "Arriba", "instruction": "Mira hacia ARRIBA", "color": (255, 100, 255)},
+        {"name": "Abajo", "instruction": "Mira hacia ABAJO", "color": (255, 100, 255)},
+    ]
+    
+    captured = 0
+    angle_idx = 0
+    frames_in_angle = 0
+    consecutive_no_face = 0
+    max_retries_per_angle = 150  # ~5 segundos a 30 FPS
+    frames_per_capture = 20  # Capturar 1 foto cada 20 frames (0.67s) en ese ángulo
+    
+    print(f"Capturando {capture_count} fotos de {label} desde múltiples ángulos...")
+    print("Sigue las instrucciones en pantalla. Mantén el rostro visible y bien iluminado.\n")
+    
+    while captured < capture_count and angle_idx < len(angles):
+        ret, frame = video.read()
+        if not ret:
+            continue
+        
+        current_angle = angles[angle_idx]
+        
+        # Procesar frame para detección
+        proc_frame = frame
+        if DOWNSCALE != 1.0:
+            proc_frame = cv2.resize(frame, (0, 0), fx=DOWNSCALE, fy=DOWNSCALE)
+        
+        rgb_proc = cv2.cvtColor(proc_frame, cv2.COLOR_BGR2RGB)
+        rgb_proc = np.ascontiguousarray(rgb_proc, dtype=np.uint8)
+        boxes_proc = face_recognition.face_locations(rgb_proc, model=MODEL)
+        
+        h, w = frame.shape[:2]
+        
+        # Dibujar instrucción grande en el centro
+        cv2.putText(
+            frame, 
+            current_angle["instruction"], 
+            (w // 2 - 200, h // 2 - 50),
+            cv2.FONT_HERSHEY_SIMPLEX, 
+            1.5, 
+            current_angle["color"], 
+            3
+        )
+        
+        # Mostrar progreso
+        progress_text = f"Foto {captured}/{capture_count} | Angulo {angle_idx + 1}/{len(angles)}"
+        cv2.putText(frame, progress_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        
+        # Mostrar estado del ángulo actual
+        if boxes_proc:
+            remaining_frames = max(0, frames_per_capture - frames_in_angle)
+            countdown = max(1, remaining_frames // 6)  # Convertir frames a segundos aproximados
+            countdown_text = f"✓ Rostro OK | Captura en {countdown}s"
+            cv2.putText(frame, countdown_text, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+            consecutive_no_face = 0
+        else:
+            consecutive_no_face += 1
+            time_in_angle_sec = frames_in_angle // 30
+            countdown_text = f"✗ Sin rostro ({time_in_angle_sec}s) | Reintentando..."
+            cv2.putText(frame, countdown_text, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+            
+            # Si lleva mucho tiempo sin detectar rostro, cambiar de ángulo
+            if frames_in_angle >= max_retries_per_angle:
+                print(f"  ⚠ No se detectó rostro en ángulo '{current_angle['name']}' después de {max_retries_per_angle // 30}s. Saltando...")
+                angle_idx += 1
+                frames_in_angle = 0
+                consecutive_no_face = 0
+                continue
+        
+        # Mostrar instrucción de controles
+        cv2.putText(
+            frame, 
+            "ESC: Saltar angulo | q: Cancelar", 
+            (10, h - 20), 
+            cv2.FONT_HERSHEY_SIMPLEX, 
+            0.6, 
+            (100, 200, 255), 
+            2
+        )
+        
+        cv2.imshow("Reconocimiento - Entrenamiento", frame)
+        key = cv2.waitKey(33) & 0xFF  # ~30 FPS
+        
+        if key == ord("q"):
+            print("\nEntrenamiento cancelado por el usuario.")
+            cv2.destroyAllWindows()
+            return captured
+        
+        if key == 27:  # ESC
+            print(f"Saltando ángulo '{current_angle['name']}'.")
+            angle_idx += 1
+            frames_in_angle = 0
+            consecutive_no_face = 0
+            continue
+        
+        # Capturar foto si hay rostro y pasó el tiempo
+        if boxes_proc and frames_in_angle >= frames_per_capture:
+            if DOWNSCALE != 1.0:
+                inv = 1.0 / DOWNSCALE
+                top, right, bottom, left = boxes_proc[0]
+                box_full = (int(top * inv), int(right * inv), int(bottom * inv), int(left * inv))
+            else:
+                box_full = boxes_proc[0]
+            
+            save_face_image(frame, box_full, label)
+            captured += 1
+            print(f"  Foto {captured}/{capture_count} capturada ({current_angle['name']})")
+            
+            # Siguiente ángulo
+            angle_idx += 1
+            frames_in_angle = 0
+        else:
+            frames_in_angle += 1
+    
+    cv2.destroyAllWindows()
+    if captured > 0:
+        print(f"\n✓ Completado: {captured} fotos capturadas desde múltiples ángulos.\n")
+    return captured
+
+
 def main():
     data = load_encodings()
     known_encodings = data["encodings"]
@@ -83,6 +214,7 @@ def main():
             proc_frame = cv2.resize(frame, (0, 0), fx=scale, fy=scale)
 
         rgb = cv2.cvtColor(proc_frame, cv2.COLOR_BGR2RGB)
+        rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
         boxes = face_recognition.face_locations(rgb, model=MODEL)
         encs = face_recognition.face_encodings(rgb, boxes)
 
@@ -150,37 +282,8 @@ def main():
                 print("Refuerzo cancelado.")
                 continue
             
-            # Captura múltiple para reforzar
-            print(f"Capturando {CAPTURE_COUNT} fotos adicionales de {existing_name}... Varia tu expresion/angulo.")
-            captured = 0
-            for i in range(CAPTURE_COUNT * 3):
-                ret, frame_cap = video.read()
-                if not ret:
-                    continue
-                
-                proc_frame = frame_cap
-                if DOWNSCALE != 1.0:
-                    proc_frame = cv2.resize(frame_cap, (0, 0), fx=DOWNSCALE, fy=DOWNSCALE)
-                
-                rgb_cap = cv2.cvtColor(proc_frame, cv2.COLOR_BGR2RGB)
-                boxes_cap = face_recognition.face_locations(rgb_cap, model=MODEL)
-                
-                if boxes_cap:
-                    if DOWNSCALE != 1.0:
-                        inv = 1.0 / DOWNSCALE
-                        top, right, bottom, left = boxes_cap[0]
-                        box_full = (int(top * inv), int(right * inv), int(bottom * inv), int(left * inv))
-                    else:
-                        box_full = boxes_cap[0]
-                    
-                    save_face_image(frame_cap, box_full, existing_name)
-                    captured += 1
-                    print(f"  Foto {captured}/{CAPTURE_COUNT} capturada")
-                    
-                    if captured >= CAPTURE_COUNT:
-                        break
-                    
-                    cv2.waitKey(200)
+            # Captura múltiple controlada con ángulos
+            captured = capture_training_photos(video, existing_name, CAPTURE_COUNT)
             
             if captured == 0:
                 print("No se pudo capturar ninguna foto. Intenta de nuevo.")
@@ -193,6 +296,23 @@ def main():
             if not encs:
                 print("No hay rostro en cuadro para aprender.")
                 continue
+            
+            # Verificar si el rostro ya está registrado
+            matches = face_recognition.compare_faces(known_encodings, encs[0], tolerance=tolerance)
+            if True in matches:
+                idx = matches.index(True)
+                existing_name = known_names[idx]
+                root = tk.Tk()
+                root.withdraw()
+                messagebox = __import__('tkinter').messagebox
+                messagebox.showinfo(
+                    "Usuario Ya Registrado",
+                    f"El rostro detectado ya está registrado como:\n\n'{existing_name}'\n\nUsa 'r' para reforzar su modelo."
+                )
+                root.destroy()
+                print(f"Rostro ya registrado como '{existing_name}'. Usa 'r' para reforzar.")
+                continue
+            
             root = tk.Tk()
             root.withdraw()
             label = simpledialog.askstring("Aprender Rostro", "Nombre para este rostro:", parent=root)
@@ -202,39 +322,8 @@ def main():
                 continue
             label = label.strip()
             
-            # Captura multiple para mejorar aprendizaje
-            print(f"Capturando {CAPTURE_COUNT} fotos de {label}... Manten el rostro visible y muevelo ligeramente.")
-            captured = 0
-            for i in range(CAPTURE_COUNT * 3):  # Intentos extra por si falla deteccion
-                ret, frame_cap = video.read()
-                if not ret:
-                    continue
-                
-                proc_frame = frame_cap
-                if DOWNSCALE != 1.0:
-                    proc_frame = cv2.resize(frame_cap, (0, 0), fx=DOWNSCALE, fy=DOWNSCALE)
-                
-                rgb_cap = cv2.cvtColor(proc_frame, cv2.COLOR_BGR2RGB)
-                boxes_cap = face_recognition.face_locations(rgb_cap, model=MODEL)
-                
-                if boxes_cap:
-                    # Escalar caja al tamaño original
-                    if DOWNSCALE != 1.0:
-                        inv = 1.0 / DOWNSCALE
-                        top, right, bottom, left = boxes_cap[0]
-                        box_full = (int(top * inv), int(right * inv), int(bottom * inv), int(left * inv))
-                    else:
-                        box_full = boxes_cap[0]
-                    
-                    save_face_image(frame_cap, box_full, label)
-                    captured += 1
-                    print(f"  Foto {captured}/{CAPTURE_COUNT} capturada")
-                    
-                    if captured >= CAPTURE_COUNT:
-                        break
-                    
-                    # Delay para variedad en capturas
-                    cv2.waitKey(200)
+            # Captura múltiple controlada con ángulos
+            captured = capture_training_photos(video, label, CAPTURE_COUNT)
             
             if captured == 0:
                 print("No se pudo capturar ninguna foto. Intenta de nuevo.")
