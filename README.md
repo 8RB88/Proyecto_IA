@@ -57,7 +57,7 @@ Reconocimineto/
 │   ├── encode_faces.py             # Genera embeddings desde imágenes de entrenamiento
 │   └── recognize.py                # Reconoce rostros en tiempo real desde webcam
 │
-└── .venv311/                      # Entorno virtual Python 3.11 (no mostrado)
+└── .venv311/                       # Entorno virtual Python 3.11 (no mostrado)
 ```
 
 ### Detalles de carpetas
@@ -71,13 +71,15 @@ Reconocimineto/
 
 ### Sistema Operativo
 - Windows 10+ (actualmente configurado)
-- Python 3.13 (recomendado) o versiones compatibles
+- Python 3.11 o superior (recomendado 3.13)
 
 ### Dependencias Python
 ```
 face_recognition >= 1.3.0
- Windows 10+ (actualmente configurado)
- Python 3.11 (recomendado) o versiones compatibles
+opencv-python >= 4.x.x
+dlib-bin >= 19.24.2
+numpy < 2.0
+cmake
 ```
 
 ### Hardware
@@ -85,12 +87,6 @@ face_recognition >= 1.3.0
 - CPU: Cualquier procesador moderno (para `hog`)
 - GPU (opcional): NVIDIA CUDA para modelo `cnn` (más rápido y preciso)
 
-### Paso 1️⃣: Navegar a la Carpeta del Proyecto
-
-Abre **PowerShell** y ve a la carpeta del proyecto:
-```powershell
-cd "C:\Users\busta\Desktop\proyectos propios\reconocimineto facial\Proyecto_IA"
-```
 ---
 
 ## 🚀 Instalación Completa
@@ -98,16 +94,9 @@ cd "C:\Users\busta\Desktop\proyectos propios\reconocimineto facial\Proyecto_IA"
 ### PREREQUISITOS ANTES DE EMPEZAR
 
 #### ✅ Verificar Python Instalado
-### Paso 2️⃣: Crear y Activar el Entorno Virtual (Python 3.11)
 
-#### 2a. Crear el Entorno
-```powershell
-py -3.11 -m venv .venv311
-```
 Abre **PowerShell** o **CMD** y ejecuta:
 ```powershell
-
-**Qué hace:** Crea una carpeta `.venv311` con una copia aislada de Python 3.11 y sus librerías. Esto evita conflictos con otros proyectos.
 python --version
 ```
 
@@ -115,39 +104,65 @@ python --version
 
 **Si no aparece nada:**
 1. Descarga Python desde https://www.python.org/downloads/
-#### 2b. Activar el Entorno (OBLIGATORIO cada vez que trabajes)
-
-**En Windows PowerShell:**
-```powershell
-.\.venv311\Scripts\Activate.ps1
-```
 2. **IMPORTANTE:** Durante la instalación, marca la opción "Add Python to PATH"
 3. Reinicia PowerShell/CMD y vuelve a verificar
 
 #### ✅ Verificar Webcam Conectada
 - Abre **Configuración > Cámara** y verifica que la cámara aparezca en la lista
-**Si usas CMD (no PowerShell):**
-```cmd
-.venv311\Scripts\activate.bat
 - Abre **Configuración > Privacidad > Cámara** y habilita acceso
 
 ---
 
 ### Paso 1️⃣: Navegar a la Carpeta del Proyecto
 
-**Verificación:** Deberías ver `(.venv311)` al inicio de la línea en la terminal:
-```
-(.venv311) C:\Users\busta\Desktop\proyectos propios\reconocimineto facial\Proyecto_IA>
-```
 Abre **PowerShell** y ve a la carpeta del proyecto:
 ```powershell
-cd "C:\Users\busta\Desktop\proyectos propios\Reconocimineto"
+cd "C:\Users\busta\Desktop\proyectos propios\reconocimineto facial\Proyecto_IA"
 ```
 
 Verifica que estés en el lugar correcto:
 ```powershell
 ls  # Deberías ver: README.md, data/, scripts/
 ```
+
+---
+
+### Paso 2️⃣: Crear y Activar el Entorno Virtual (Python 3.11)
+
+#### 2a. Crear el Entorno
+```powershell
+py -3.11 -m venv .venv311
+```
+
+**Qué hace:** Crea una carpeta `.venv311` con una copia aislada de Python 3.11 y sus librerías. Esto evita conflictos con otros proyectos.
+
+**Tiempo aproximado:** 30-60 segundos
+
+#### 2b. Activar el Entorno (OBLIGATORIO cada vez que trabajes)
+
+**En Windows PowerShell:**
+```powershell
+.\.venv311\Scripts\Activate.ps1
+```
+
+**Si ves un error de permisos en PowerShell:**
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+Luego ejecuta nuevamente el comando de activación.
+
+**Si usas CMD (no PowerShell):**
+```cmd
+.venv311\Scripts\activate.bat
+```
+
+**Verificación:** Deberías ver `(.venv311)` al inicio de la línea en la terminal:
+```
+(.venv311) C:\Users\busta\Desktop\proyectos propios\reconocimineto facial\Proyecto_IA>
+```
+
+---
+
 ### Paso 3️⃣: Instalar Dependencias (sin compilar dlib)
 
 Con el entorno activado (ves `(.venv311)` en la terminal), ejecuta:
@@ -159,62 +174,15 @@ pip install "numpy<2" opencv-python cmake
 pip install face_recognition --no-deps
 ```
 
----
-#### 2a. Crear el Entorno
-```powershell
-python -m venv .venv
-```
-
-**Prueba rápida de importación:**
-```powershell
-python -c "import cv2, face_recognition; print('✅ Todas las librerías instaladas correctamente')"
-```
-**Qué hace:** Crea una carpeta `.venv` con una copia aislada de Python y sus librerías. Esto evita conflictos con otros proyectos.
-
-**Tiempo aproximado:** 30-60 segundos
-
-#### 2b. Activar el Entorno (OBLIGATORIO cada vez que trabajes)
-
-**En Windows PowerShell:**
-```powershell
-python scripts/recognize.py
-.\.venv\Scripts\Activate.ps1
-```
-
-**Si ves un error de permisos en PowerShell:**
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-Luego ejecuta nuevamente el comando de activación.
-
-**Si usas CMD (no PowerShell):**
-```cmd
-.venv\Scripts\activate.bat
-```
-
-**Verificación:** Deberías ver `(.venv)` al inicio de la línea en la terminal:
-```
-(.venv) C:\Users\busta\Desktop\proyectos propios\Reconocimineto>
-```
-
----
-
-### Paso 3️⃣: Instalar Dependencias
-
-Con el entorno activado (ves `(.venv)` en la terminal), ejecuta:
-
-```powershell
-pip install --upgrade pip
-pip install face_recognition opencv-python cmake
-```
-
 **Qué instala:**
-- **pip**: Gestor de paquetes (lo actualizamos primero para evitar errores)
-- **face_recognition**: Librería de detección y encoding facial
+- **pip, setuptools, wheel**: Herramientas de gestión de paquetes actualizadas
+- **dlib-bin**: Motor de detección facial precompilado (evita compilar desde fuente)
+- **numpy**: Librería de procesamiento numérico (versión < 2.0 para compatibilidad)
 - **opencv-python**: Captura y procesamiento de video
-- **cmake**: Herramienta de compilación (necesaria para face_recognition)
+- **cmake**: Herramienta de compilación
+- **face_recognition**: Librería principal de reconocimiento facial
 
-**Tiempo aproximado:** 5-15 minutos (depende de tu internet y CPU)
+**Tiempo aproximado:** 5-10 minutos (depende de tu internet)
 
 #### 🔍 Verificar Instalación
 Una vez completado, verifica que todo esté instalado:
@@ -226,13 +194,14 @@ Deberías ver en la lista:
 ```
 face-recognition         (versión 1.3.x o superior)
 opencv-python           (versión 4.x.x)
+dlib-bin                (versión 19.24.x)
+numpy                   (versión 1.x.x)
 cmake                   (versión 3.x.x)
-numpy                   (automático, requerido por las librerías)
 ```
 
 **Prueba rápida de importación:**
 ```powershell
-python -c "import cv2; import face_recognition; print('✅ Todas las librerías instaladas correctamente')"
+python -c "import cv2, face_recognition; print('✅ Todas las librerías instaladas correctamente')"
 ```
 
 Si ves el mensaje `✅ Todas las librerías instaladas correctamente`, ¡todo está bien!
@@ -366,58 +335,13 @@ python scripts/recognize.py
 
 ---
 
-## 🎓 Flujo de Aprendizaje Mejorado
-
-### Aprender un Nuevo Rostro (`a`)
-
-1. Presiona `a` en la ventana principal con el rostro visible
-2. Se abre un diálogo pidiendo el nombre de la persona
-3. El sistema verifica si el rostro **ya está registrado**:
-   - Si **SÍ**: Muestra un mensaje "Usuario Ya Registrado" y sugiere usar `r` para reforzar
-   - Si **NO**: Inicia la captura controlada
-
-4. Durante la captura, se piden fotos desde **5 ángulos diferentes**:
-   - 🟢 **Frente** (verde)
-   - 🟠 **Derecha** (naranja)
-   - 🟠 **Izquierda** (naranja)
-   - 🟣 **Arriba** (púrpura)
-   - 🟣 **Abajo** (púrpura)
-
-5. Para cada ángulo, el sistema:
-   - Muestra instrucciones grandes en pantalla
-   - Cuenta el progreso: `Foto X/5 | Ángulo Y/5`
-   - Espera **0.67 segundos** con rostro detectado antes de capturar
-   - Muestra `✓ Rostro OK` en verde si detecta, o `✗ Sin rostro` en rojo si no
-   - **Reintentos automáticos**: Si lleva 5 segundos sin detectar rostro, salta al siguiente ángulo
-   - Puedes presionar **ESC** para saltar manualmente un ángulo
-
-6. Después de capturar las fotos:
-   - Se reentrena el modelo automáticamente
-   - Se actualiza `known_encodings.pkl`
-   - La terminal muestra: `Guardadas X fotos para [nombre] y actualizado...`
-
-### Reforzar un Rostro Existente (`r`)
-
-1. Presiona `r` en la ventana principal con el rostro de la persona registrada visible
-2. Se verifica si el rostro está registrado:
-   - Si **NO**: Muestra un mensaje "Rostro no reconocido" y sugiere usar `a` para aprender
-   - Si **SÍ**: Abre un diálogo confirmando la persona detectada
-
-3. Confirma si deseas capturar más fotos (responde `s`, `si`, `yes` o `y`)
-
-4. Sigue el mismo flujo de captura de **5 ángulos** que en aprendizaje
-
-5. Se reentrena el modelo con las nuevas fotos, mejorando la precisión
-
----
-
 ## ✅ Lista de Verificación Post-Instalación
 
 Verifica que todos estos puntos estén completos:
 
 - [ ] Python 3.x instalado y en PATH
-- [ ] Carpeta `.venv` creada
-- [ ] Entorno activado (ves `(.venv)` en terminal)
+- [ ] Carpeta `.venv311` creada
+- [ ] Entorno activado (ves `(.venv311)` en terminal)
 - [ ] `face_recognition` instalado (`pip list` lo muestra)
 - [ ] `opencv-python` instalado
 - [ ] `cmake` instalado
@@ -429,143 +353,6 @@ Verifica que todos estos puntos estén completos:
 - [ ] Webcam funciona en Windows
 - [ ] `recognize.py` abre la ventana de video
 - [ ] Rostros se detectan (rectángulos verdes)
-
----
-
-## 🔧 Solución de Problemas de Instalación
-
-### ❌ "python: No se reconoce como comando"
-**Causa:** Python no está en PATH
-
-**Solución:**
-1. Desinstala Python completamente
-2. Descarga desde https://www.python.org/downloads/
-3. Durante instalación, **marca "Add Python to PATH"**
-4. Reinicia PowerShell y verifica con `python --version`
-
----
-
-### ❌ "No se puede cargar el archivo Activate.ps1 porque la ejecución de scripts está deshabilitada"
-**Solución:**
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-Selecciona `Y` (Sí) cuando pida confirmación. Luego ejecuta:
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
----
-
-### ❌ "ERROR: No matching distribution found for face_recognition"
-**Causa:** face_recognition tiene requisitos específicos (CMake, dlib)
-
-**Soluciones en orden:**
-1. Actualiza pip:
-   ```powershell
-   pip install --upgrade pip setuptools wheel
-   ```
-
-2. Instala CMake primero:
-   ```powershell
-   pip install cmake
-   ```
-
-3. Luego face_recognition:
-   ```powershell
-   pip install face_recognition
-   ```
-
-4. Si aún falla, intenta:
-   ```powershell
-   pip install face_recognition --no-binary dlib
-   ```
-
----
-
-### ❌ "error: Microsoft Visual C++ is required"
-**Causa:** Falta compilador de C++ para compilar dlib
-
-**Soluciones:**
-1. Descarga "Build Tools for Visual Studio 2022" desde: https://visualstudio.microsoft.com/es/downloads/
-2. Selecciona "C++ build tools"
-3. Instala y reinicia
-4. Vuelve a ejecutar: `pip install face_recognition`
-
-**Alternativa (más rápida):**
-```powershell
-pip install dlib-binary
-pip install face_recognition
-```
-
----
-
-### ❌ "ModuleNotFoundError: No module named 'cv2'"
-**Solución:**
-```powershell
-pip install opencv-python
-```
-
----
-
-### ❌ La carpeta `.venv` es muy grande o consume espacio
-**Nota:** Es normal que ocupe 500MB-1GB. Si quieres recrearla:
-```powershell
-Remove-Item .venv -Recurse
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install face_recognition opencv-python cmake
-```
-
----
-
-### ❌ "Sin rostro en [imagen], se omite"
-**Significado:** Una imagen no tiene un rostro detectado
-
-**Soluciones:**
-1. Verifica que la imagen tenga un rostro claramente visible
-2. Mejora la iluminación
-3. Prueba con otra imagen
-4. **Esto NO es un error**, el script omite automáticamente imágenes sin rostros
-
----
-
-### ❌ Webcam no se abre
-**Soluciones Windows:**
-1. Ve a **Configuración > Privacidad > Cámara**
-2. Activa "Acceso a la cámara"
-3. Desplázate a "Permitir que las aplicaciones accedan a la cámara"
-4. Activa acceso para la aplicación de terminal/Python
-5. Reinicia PowerShell
-6. Ejecuta `python scripts/recognize.py` nuevamente
-
----
-
-### ✅ Verificación Rápida de Instalación (Script Test)
-
-Copia y ejecuta esto en PowerShell para verificar todo de una vez:
-
-```powershell
-Write-Host "🔍 Verificando Python..."
-python --version
-
-Write-Host "`n🔍 Verificando librería face_recognition..."
-python -c "import face_recognition; print('✅ face_recognition OK')"
-
-Write-Host "`n🔍 Verificando OpenCV..."
-python -c "import cv2; print('✅ opencv-python OK')"
-
-Write-Host "`n🔍 Verificando CMake..."
-python -c "import cmake; print('✅ cmake OK')"
-
-Write-Host "`n🔍 Verificando estructura de carpetas..."
-if (Test-Path "data\train") { Write-Host "✅ data/train existe" } else { Write-Host "❌ data/train NO existe" }
-if (Test-Path "data\known_encodings.pkl") { Write-Host "✅ known_encodings.pkl existe" } else { Write-Host "⚠️  known_encodings.pkl no existe (genéralo con encode_faces.py)" }
-if (Test-Path "scripts\recognize.py") { Write-Host "✅ recognize.py existe" } else { Write-Host "❌ recognize.py NO existe" }
-if (Test-Path "scripts\encode_faces.py") { Write-Host "✅ encode_faces.py existe" } else { Write-Host "❌ encode_faces.py NO existe" }
-
-Write-Host "`n✅ Verificación completada"
-```
 
 ---
 
@@ -608,6 +395,51 @@ python scripts/recognize.py
 ```
 
 Se abrirá una ventana con el video en vivo. Presiona las teclas indicadas en pantalla para controlar el sistema.
+
+---
+
+## 🎓 Flujo de Aprendizaje Mejorado
+
+### Aprender un Nuevo Rostro (`a`)
+
+1. Presiona `a` en la ventana principal con el rostro visible
+2. Se abre un diálogo pidiendo el nombre de la persona
+3. El sistema verifica si el rostro **ya está registrado**:
+   - Si **SÍ**: Muestra un mensaje "Usuario Ya Registrado" y sugiere usar `r` para reforzar
+   - Si **NO**: Inicia la captura controlada
+
+4. Durante la captura, se piden fotos desde **5 ángulos diferentes**:
+   - 🟢 **Frente** (verde)
+   - 🟠 **Derecha** (naranja)
+   - 🟠 **Izquierda** (naranja)
+   - 🟣 **Arriba** (púrpura)
+   - 🟣 **Abajo** (púrpura)
+
+5. Para cada ángulo, el sistema:
+   - Muestra instrucciones grandes en pantalla
+   - Cuenta el progreso: `Foto X/5 | Ángulo Y/5`
+   - Espera **0.67 segundos** con rostro detectado antes de capturar
+   - Muestra `✓ Rostro OK` en verde si detecta, o `✗ Sin rostro` en rojo si no
+   - **Reintentos automáticos**: Si lleva 5 segundos sin detectar rostro, salta al siguiente ángulo
+   - Puedes presionar **ESC** para saltar manualmente un ángulo
+
+6. Después de capturar las fotos:
+   - Se reentrena el modelo automáticamente
+   - Se actualiza `known_encodings.pkl`
+   - La terminal muestra: `Guardadas X fotos para [nombre] y actualizado...`
+
+### Reforzar un Rostro Existente (`r`)
+
+1. Presiona `r` en la ventana principal con el rostro de la persona registrada visible
+2. Se verifica si el rostro está registrado:
+   - Si **NO**: Muestra un mensaje "Rostro no reconocido" y sugiere usar `a` para aprender
+   - Si **SÍ**: Abre un diálogo confirmando la persona detectada
+
+3. Confirma si deseas capturar más fotos (responde `s`, `si`, `yes` o `y`)
+
+4. Sigue el mismo flujo de captura de **5 ángulos** que en aprendizaje
+
+5. Se reentrena el modelo con las nuevas fotos, mejorando la precisión
 
 ---
 
@@ -812,6 +644,135 @@ pip install face_recognition cmake
 
 ---
 
+## 🔧 Solución de Problemas de Instalación
+
+### ❌ "python: No se reconoce como comando"
+**Causa:** Python no está en PATH
+
+**Solución:**
+1. Desinstala Python completamente
+2. Descarga desde https://www.python.org/downloads/
+3. Durante instalación, **marca "Add Python to PATH"**
+4. Reinicia PowerShell y verifica con `python --version`
+
+---
+
+### ❌ "No se puede cargar el archivo Activate.ps1 porque la ejecución de scripts está deshabilitada"
+**Solución:**
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+Selecciona `Y` (Sí) cuando pida confirmación. Luego ejecuta:
+```powershell
+.\.venv311\Scripts\Activate.ps1
+```
+
+---
+
+### ❌ "ERROR: No matching distribution found for face_recognition"
+**Causa:** face_recognition tiene requisitos específicos (CMake, dlib)
+
+**Soluciones en orden:**
+1. Actualiza pip:
+   ```powershell
+   pip install --upgrade pip setuptools wheel
+   ```
+
+2. Instala CMake primero:
+   ```powershell
+   pip install cmake
+   ```
+
+3. Luego face_recognition:
+   ```powershell
+   pip install face_recognition
+   ```
+
+4. Si aún falla, intenta:
+   ```powershell
+   pip install face_recognition --no-binary dlib
+   ```
+
+---
+
+### ❌ "error: Microsoft Visual C++ is required"
+**Causa:** Falta compilador de C++ para compilar dlib
+
+**Soluciones:**
+1. Descarga "Build Tools for Visual Studio 2022" desde: https://visualstudio.microsoft.com/es/downloads/
+2. Selecciona "C++ build tools"
+3. Instala y reinicia
+4. Vuelve a ejecutar: `pip install face_recognition`
+
+**Alternativa (más rápida):**
+```powershell
+pip install dlib-binary
+pip install face_recognition
+```
+
+---
+
+### ❌ "ModuleNotFoundError: No module named 'cv2'"
+**Solución:**
+```powershell
+pip install opencv-python
+```
+
+---
+
+### ❌ La carpeta `.venv311` es muy grande o consume espacio
+**Nota:** Es normal que ocupe 500MB-1GB. Si quieres recrearla:
+```powershell
+Remove-Item .venv311 -Recurse
+py -3.11 -m venv .venv311
+.\.venv311\Scripts\Activate.ps1
+pip install --upgrade pip setuptools wheel
+pip install dlib-bin==19.24.2
+pip install "numpy<2" opencv-python cmake
+pip install face_recognition --no-deps
+```
+
+---
+
+### ❌ Webcam no se abre
+**Soluciones Windows:**
+1. Ve a **Configuración > Privacidad > Cámara**
+2. Activa "Acceso a la cámara"
+3. Desplázate a "Permitir que las aplicaciones accedan a la cámara"
+4. Activa acceso para la aplicación de terminal/Python
+5. Reinicia PowerShell
+6. Ejecuta `python scripts/recognize.py` nuevamente
+
+---
+
+### ✅ Verificación Rápida de Instalación (Script Test)
+
+Copia y ejecuta esto en PowerShell para verificar todo de una vez:
+
+```powershell
+Write-Host "🔍 Verificando Python..."
+python --version
+
+Write-Host "`n🔍 Verificando librería face_recognition..."
+python -c "import face_recognition; print('✅ face_recognition OK')"
+
+Write-Host "`n🔍 Verificando OpenCV..."
+python -c "import cv2; print('✅ opencv-python OK')"
+
+Write-Host "`n🔍 Verificando CMake..."
+python -c "import cmake; print('✅ cmake OK')"
+
+Write-Host "`n🔍 Verificando estructura de carpetas..."
+if (Test-Path "data\train") { Write-Host "✅ data/train existe" } else { Write-Host "❌ data/train NO existe" }
+if (Test-Path "data\known_encodings.pkl") { Write-Host "✅ known_encodings.pkl existe" } else { Write-Host "⚠️  known_encodings.pkl no existe (genéralo con encode_faces.py)" }
+if (Test-Path "scripts\recognize.py") { Write-Host "✅ recognize.py existe" } else { Write-Host "❌ recognize.py NO existe" }
+if (Test-Path "scripts\encode_faces.py") { Write-Host "✅ encode_faces.py existe" } else { Write-Host "❌ encode_faces.py NO existe" }
+
+Write-Host "`n✅ Verificación completada"
+```
+
+---
+
 ## 📚 Notas Técnicas
 
 ### Cómo Funcionan los Embeddings
@@ -841,6 +802,12 @@ Proyecto personal. Utiliza librerías open-source:
 
 ---
 
-## 👤 UNPERR0
+## 👤 Autor
+
+**UNPERR0**
 
 Proyecto realizado con Python y librerías de código abierto.
+
+---
+
+**¡Gracias por usar este sistema de reconocimiento facial! 🎉**
