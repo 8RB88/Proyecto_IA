@@ -804,7 +804,7 @@ Proyecto personal. Utiliza librerías open-source:
 
 ## 👤 Autor
 
-**UNPERR0**
+**UNPERR0 y EL FOXY**
 
 Proyecto realizado con Python y librerías de código abierto.
 
