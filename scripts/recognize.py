@@ -16,9 +16,10 @@ TRAIN_DIR = DATA_DIR / "train"
 
 # Configuracion rapida
 MODEL = "hog"  # "hog" rapido CPU; "cnn" requiere GPU/CUDA
-DOWNSCALE = 0.75  # 1.0 sin cambio; 0.5 reduce a mitad para mas FPS
+DOWNSCALE = 0.5  # 1.0 sin cambio; 0.5 reduce a mitad para mas FPS (optimizado para fluidez)
 TOLERANCE = 0.45  # menor = mas estricto; mayor = mas permisivo
 CAPTURE_COUNT = 5  # Numero de fotos a capturar al aprender
+DETECT_EVERY_N_FRAMES = 2  # Detectar cada N frames para mejorar FPS (cada 2 frames = mas fluido)
 
 
 def normalize_name(name: str) -> str:
@@ -82,7 +83,7 @@ def capture_training_photos(video, label, capture_count=5):
     """
     Captura fotos controladas de múltiples ángulos con instrucciones visuales.
     Pide al usuario que mire hacia: frente, derecha, izquierda, arriba, abajo.
-    Reintentas automáticamente si no detecta rostro.
+    OBLIGA a capturar de todos los ángulos - no salta ni omite.
     """
     angles = [
         {"name": "Frente", "instruction": "Mira AL FRENTE", "color": (0, 255, 0)},
@@ -95,14 +96,14 @@ def capture_training_photos(video, label, capture_count=5):
     captured = 0
     angle_idx = 0
     frames_in_angle = 0
-    consecutive_no_face = 0
-    max_retries_per_angle = 150  # ~5 segundos a 30 FPS
     frames_per_capture = 20  # Capturar 1 foto cada 20 frames (0.67s) en ese ángulo
+    max_wait_time = 600  # 20 segundos de espera máxima por ángulo (a 30 FPS)
+    no_face_count = 0
     
-    print(f"Capturando {capture_count} fotos de {label} desde múltiples ángulos...")
-    print("Sigue las instrucciones en pantalla. Mantén el rostro visible y bien iluminado.\n")
+    print(f"\nCapturando {capture_count} fotos de {label} desde múltiples ángulos...")
+    print("IMPORTANTE: Se capturarán fotos de TODOS los ángulos. Mantén el rostro visible.\n")
     
-    while captured < capture_count and angle_idx < len(angles):
+    while angle_idx < len(angles):
         ret, frame = video.read()
         if not ret:
             continue
@@ -132,34 +133,27 @@ def capture_training_photos(video, label, capture_count=5):
         )
         
         # Mostrar progreso
-        progress_text = f"Foto {captured}/{capture_count} | Angulo {angle_idx + 1}/{len(angles)}"
+        progress_text = f"Angulo {angle_idx + 1}/{len(angles)} | {current_angle['name']}"
         cv2.putText(frame, progress_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
         
         # Mostrar estado del ángulo actual
         if boxes_proc:
             remaining_frames = max(0, frames_per_capture - frames_in_angle)
-            countdown = max(1, remaining_frames // 6)  # Convertir frames a segundos aproximados
-            countdown_text = f"✓ Rostro OK | Captura en {countdown}s"
+            countdown = max(1, remaining_frames // 6)
+            countdown_text = f"✓ Rostro detectado | Captura en {countdown}s"
             cv2.putText(frame, countdown_text, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-            consecutive_no_face = 0
+            no_face_count = 0
         else:
-            consecutive_no_face += 1
-            time_in_angle_sec = frames_in_angle // 30
-            countdown_text = f"✗ Sin rostro ({time_in_angle_sec}s) | Reintentando..."
+            no_face_count += 1
+            time_waiting_sec = frames_in_angle // 30
+            max_wait_sec = max_wait_time // 30
+            countdown_text = f"✗ Sin rostro ({time_waiting_sec}s/{max_wait_sec}s) | Reintentando..."
             cv2.putText(frame, countdown_text, (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-            
-            # Si lleva mucho tiempo sin detectar rostro, cambiar de ángulo
-            if frames_in_angle >= max_retries_per_angle:
-                print(f"  ⚠ No se detectó rostro en ángulo '{current_angle['name']}' después de {max_retries_per_angle // 30}s. Saltando...")
-                angle_idx += 1
-                frames_in_angle = 0
-                consecutive_no_face = 0
-                continue
         
-        # Mostrar instrucción de controles
+        # Mostrar instrucción de controles mejorada
         cv2.putText(
             frame, 
-            "ESC: Saltar angulo | q: Cancelar", 
+            "ESC: Omitir este angulo | q: Cancelar TODO", 
             (10, h - 20), 
             cv2.FONT_HERSHEY_SIMPLEX, 
             0.6, 
@@ -168,18 +162,18 @@ def capture_training_photos(video, label, capture_count=5):
         )
         
         cv2.imshow("Reconocimiento - Entrenamiento", frame)
-        key = cv2.waitKey(33) & 0xFF  # ~30 FPS
+        key = cv2.waitKey(20) & 0xFF
         
         if key == ord("q"):
-            print("\nEntrenamiento cancelado por el usuario.")
+            print("\nEntrenamiento cancelado completamente.")
             cv2.destroyAllWindows()
-            return captured
+            return 0
         
-        if key == 27:  # ESC
-            print(f"Saltando ángulo '{current_angle['name']}'.")
+        if key == 27:  # ESC - Omitir ángulo pero continuar
+            print(f"  ⚠ Ángulo '{current_angle['name']}' omitido manualmente.")
             angle_idx += 1
             frames_in_angle = 0
-            consecutive_no_face = 0
+            no_face_count = 0
             continue
         
         # Capturar foto si hay rostro y pasó el tiempo
@@ -193,17 +187,46 @@ def capture_training_photos(video, label, capture_count=5):
             
             save_face_image(frame, box_full, label)
             captured += 1
-            print(f"  Foto {captured}/{capture_count} capturada ({current_angle['name']})")
+            print(f"  ✓ Captura completada: {current_angle['name']} ({captured}/{len(angles)})")
+            
+            # Pausa visual corta antes de siguiente ángulo
+            for _ in range(15):  # 0.5 segundos aprox
+                ret, frame = video.read()
+                if ret:
+                    cv2.putText(frame, "Siguiente angulo en 1s...", (w // 2 - 150, h // 2), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 100), 2)
+                    cv2.imshow("Reconocimiento - Entrenamiento", frame)
+                    cv2.waitKey(33)
             
             # Siguiente ángulo
             angle_idx += 1
             frames_in_angle = 0
+            no_face_count = 0
         else:
-            frames_in_angle += 1
+            # Si se alcanzó tiempo máximo sin captura, aún así forzar siguiente ángulo
+            if frames_in_angle >= max_wait_time:
+                if boxes_proc:
+                    # Capturar aunque sea en el límite
+                    if DOWNSCALE != 1.0:
+                        inv = 1.0 / DOWNSCALE
+                        top, right, bottom, left = boxes_proc[0]
+                        box_full = (int(top * inv), int(right * inv), int(bottom * inv), int(left * inv))
+                    else:
+                        box_full = boxes_proc[0]
+                    save_face_image(frame, box_full, label)
+                    captured += 1
+                    print(f"  ✓ Captura de emergencia: {current_angle['name']} ({captured}/{len(angles)})")
+                else:
+                    print(f"  ⚠ No se capturó rostro en '{current_angle['name']}' después de {max_wait_time // 30}s. Omitido.")
+                
+                angle_idx += 1
+                frames_in_angle = 0
+                no_face_count = 0
+            else:
+                frames_in_angle += 1
     
     cv2.destroyAllWindows()
-    if captured > 0:
-        print(f"\n✓ Completado: {captured} fotos capturadas desde múltiples ángulos.\n")
+    print(f"\n✓ Completado: {captured} ángulos procesados (de {len(angles)} solicitados).\n")
     return captured
 
 
@@ -216,36 +239,48 @@ def main():
     video = cv2.VideoCapture(0)
     if not video.isOpened():
         raise RuntimeError("No se pudo abrir la cámara")
+    
+    # Optimizar configuración de cámara para fluidez
+    video.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Minimizar buffer para menor latencia
+    video.set(cv2.CAP_PROP_FPS, 30)  # Establecer FPS a 30
+
+    frame_count = 0
+    boxes = []
+    encs = []
 
     while True:
         ret, frame = video.read()
         if not ret:
             break
 
-        proc_frame = frame
+        frame_count += 1
         scale = DOWNSCALE
-        if scale != 1.0:
-            proc_frame = cv2.resize(frame, (0, 0), fx=scale, fy=scale)
+        
+        # Detectar rostros solo cada N frames para mejorar fluidez
+        if frame_count % DETECT_EVERY_N_FRAMES == 0:
+            proc_frame = frame
+            if scale != 1.0:
+                proc_frame = cv2.resize(frame, (0, 0), fx=scale, fy=scale)
 
-        rgb = cv2.cvtColor(proc_frame, cv2.COLOR_BGR2RGB)
-        rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
-        boxes = face_recognition.face_locations(rgb, model=MODEL)
-        encs = face_recognition.face_encodings(rgb, boxes)
-
-        # Escala las cajas de regreso al tamano original para dibujar y recortar.
-        if scale != 1.0:
-            boxes_full = []
-            inv = 1.0 / scale
-            for (top, right, bottom, left) in boxes:
-                boxes_full.append(
-                    (
-                        int(top * inv),
-                        int(right * inv),
-                        int(bottom * inv),
-                        int(left * inv),
+            rgb = cv2.cvtColor(proc_frame, cv2.COLOR_BGR2RGB)
+            rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
+            boxes = face_recognition.face_locations(rgb, model=MODEL)
+            encs = face_recognition.face_encodings(rgb, boxes)
+            
+            # Escalar las cajas de regreso al tamaño original inmediatamente después de detectar
+            if scale != 1.0 and boxes:
+                boxes_scaled = []
+                inv = 1.0 / scale
+                for (top, right, bottom, left) in boxes:
+                    boxes_scaled.append(
+                        (
+                            int(top * inv),
+                            int(right * inv),
+                            int(bottom * inv),
+                            int(left * inv),
+                        )
                     )
-                )
-            boxes = boxes_full
+                boxes = boxes_scaled
 
         for (top, right, bottom, left), enc in zip(boxes, encs):
             matches = face_recognition.compare_faces(known_encodings, enc, tolerance=tolerance)
@@ -261,7 +296,7 @@ def main():
         cv2.putText(frame, f"tol {tolerance:.2f}  -/+ ajusta  r: reforzar", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
         cv2.imshow("Reconocimiento", frame)
-        key = cv2.waitKey(1) & 0xFF
+        key = cv2.waitKey(20) & 0xFF  # 20ms = ~50 FPS para fluidez óptima
         if key == ord("q"):
             break
         if key == ord("-"):
