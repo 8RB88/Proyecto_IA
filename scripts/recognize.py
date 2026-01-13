@@ -16,10 +16,10 @@ TRAIN_DIR = DATA_DIR / "train"
 
 # Configuracion rapida
 MODEL = "hog"  # "hog" rapido CPU; "cnn" requiere GPU/CUDA
-DOWNSCALE = 0.5  # 1.0 sin cambio; 0.5 reduce a mitad para mas FPS (optimizado para fluidez)
-TOLERANCE = 0.45  # menor = mas estricto; mayor = mas permisivo
+DOWNSCALE = 0.4  # 1.0 sin cambio; 0.4 = balance entre velocidad y precisión
+TOLERANCE = 0.50  # menor = mas estricto; mayor = mas permisivo (ajustado para face_distance)
 CAPTURE_COUNT = 5  # Numero de fotos a capturar al aprender
-DETECT_EVERY_N_FRAMES = 2  # Detectar cada N frames para mejorar FPS (cada 2 frames = mas fluido)
+DETECT_EVERY_N_FRAMES = 3  # Detectar cada 3 frames (balance fluidez/reconocimiento)
 
 
 def normalize_name(name: str) -> str:
@@ -96,7 +96,7 @@ def capture_training_photos(video, label, capture_count=5):
     captured = 0
     angle_idx = 0
     frames_in_angle = 0
-    frames_per_capture = 20  # Capturar 1 foto cada 20 frames (0.67s) en ese ángulo
+    frames_per_capture = 90  # Capturar 1 foto cada 90 frames (3s) en ese ángulo
     max_wait_time = 600  # 20 segundos de espera máxima por ángulo (a 30 FPS)
     no_face_count = 0
     
@@ -110,13 +110,10 @@ def capture_training_photos(video, label, capture_count=5):
         
         current_angle = angles[angle_idx]
         
-        # Procesar frame para detección
-        proc_frame = frame
-        if DOWNSCALE != 1.0:
-            proc_frame = cv2.resize(frame, (0, 0), fx=DOWNSCALE, fy=DOWNSCALE)
+        # Procesar frame para detección (usar DOWNSCALE para consistencia)
+        proc_frame = cv2.resize(frame, (0, 0), fx=DOWNSCALE, fy=DOWNSCALE)
         
         rgb_proc = cv2.cvtColor(proc_frame, cv2.COLOR_BGR2RGB)
-        rgb_proc = np.ascontiguousarray(rgb_proc, dtype=np.uint8)
         boxes_proc = face_recognition.face_locations(rgb_proc, model=MODEL)
         
         h, w = frame.shape[:2]
@@ -161,12 +158,11 @@ def capture_training_photos(video, label, capture_count=5):
             2
         )
         
-        cv2.imshow("Reconocimiento - Entrenamiento", frame)
-        key = cv2.waitKey(20) & 0xFF
+        cv2.imshow("Reconocimiento", frame)
+        key = cv2.waitKey(1) & 0xFF
         
         if key == ord("q"):
             print("\nEntrenamiento cancelado completamente.")
-            cv2.destroyAllWindows()
             return 0
         
         if key == 27:  # ESC - Omitir ángulo pero continuar
@@ -178,12 +174,10 @@ def capture_training_photos(video, label, capture_count=5):
         
         # Capturar foto si hay rostro y pasó el tiempo
         if boxes_proc and frames_in_angle >= frames_per_capture:
-            if DOWNSCALE != 1.0:
-                inv = 1.0 / DOWNSCALE
-                top, right, bottom, left = boxes_proc[0]
-                box_full = (int(top * inv), int(right * inv), int(bottom * inv), int(left * inv))
-            else:
-                box_full = boxes_proc[0]
+            # Escalar caja usando el factor inverso de DOWNSCALE
+            inv = 1.0 / DOWNSCALE
+            top, right, bottom, left = boxes_proc[0]
+            box_full = (int(top * inv), int(right * inv), int(bottom * inv), int(left * inv))
             
             save_face_image(frame, box_full, label)
             captured += 1
@@ -195,7 +189,7 @@ def capture_training_photos(video, label, capture_count=5):
                 if ret:
                     cv2.putText(frame, "Siguiente angulo en 1s...", (w // 2 - 150, h // 2), 
                                cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 100), 2)
-                    cv2.imshow("Reconocimiento - Entrenamiento", frame)
+                    cv2.imshow("Reconocimiento", frame)
                     cv2.waitKey(33)
             
             # Siguiente ángulo
@@ -206,13 +200,10 @@ def capture_training_photos(video, label, capture_count=5):
             # Si se alcanzó tiempo máximo sin captura, aún así forzar siguiente ángulo
             if frames_in_angle >= max_wait_time:
                 if boxes_proc:
-                    # Capturar aunque sea en el límite
-                    if DOWNSCALE != 1.0:
-                        inv = 1.0 / DOWNSCALE
-                        top, right, bottom, left = boxes_proc[0]
-                        box_full = (int(top * inv), int(right * inv), int(bottom * inv), int(left * inv))
-                    else:
-                        box_full = boxes_proc[0]
+                    # Capturar aunque sea en el límite, usar factor inverso de DOWNSCALE
+                    inv = 1.0 / DOWNSCALE
+                    top, right, bottom, left = boxes_proc[0]
+                    box_full = (int(top * inv), int(right * inv), int(bottom * inv), int(left * inv))
                     save_face_image(frame, box_full, label)
                     captured += 1
                     print(f"  ✓ Captura de emergencia: {current_angle['name']} ({captured}/{len(angles)})")
@@ -225,7 +216,6 @@ def capture_training_photos(video, label, capture_count=5):
             else:
                 frames_in_angle += 1
     
-    cv2.destroyAllWindows()
     print(f"\n✓ Completado: {captured} ángulos procesados (de {len(angles)} solicitados).\n")
     return captured
 
@@ -243,10 +233,14 @@ def main():
     # Optimizar configuración de cámara para fluidez
     video.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Minimizar buffer para menor latencia
     video.set(cv2.CAP_PROP_FPS, 30)  # Establecer FPS a 30
+    video.set(cv2.CAP_PROP_FRAME_WIDTH, 640)  # Resolución reducida
+    video.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)  # Resolución reducida
 
     frame_count = 0
     boxes = []
-    encs = []
+    names = []  # Guardar nombres detectados
+    encs = []  # Guardar encodings para funciones de aprender/reforzar
+    last_detection_time = 0  # Control de tiempo para detección
 
     while True:
         ret, frame = video.read()
@@ -256,23 +250,23 @@ def main():
         frame_count += 1
         scale = DOWNSCALE
         
-        # Detectar rostros solo cada N frames para mejorar fluidez
+        # Detectar y reconocer rostros solo cada N frames para mejorar fluidez
         if frame_count % DETECT_EVERY_N_FRAMES == 0:
-            proc_frame = frame
-            if scale != 1.0:
-                proc_frame = cv2.resize(frame, (0, 0), fx=scale, fy=scale)
+            # Reducir aún más el frame para detección
+            proc_frame = cv2.resize(frame, (0, 0), fx=scale, fy=scale)
 
             rgb = cv2.cvtColor(proc_frame, cv2.COLOR_BGR2RGB)
-            rgb = np.ascontiguousarray(rgb, dtype=np.uint8)
-            boxes = face_recognition.face_locations(rgb, model=MODEL)
-            encs = face_recognition.face_encodings(rgb, boxes)
+            boxes_proc = face_recognition.face_locations(rgb, model=MODEL)
             
-            # Escalar las cajas de regreso al tamaño original inmediatamente después de detectar
-            if scale != 1.0 and boxes:
-                boxes_scaled = []
+            # Solo calcular encodings si hay caras detectadas
+            if boxes_proc:
+                encs = face_recognition.face_encodings(rgb, boxes_proc)
+                
+                # Escalar las cajas de regreso al tamaño original
+                boxes = []
                 inv = 1.0 / scale
-                for (top, right, bottom, left) in boxes:
-                    boxes_scaled.append(
+                for (top, right, bottom, left) in boxes_proc:
+                    boxes.append(
                         (
                             int(top * inv),
                             int(right * inv),
@@ -280,15 +274,29 @@ def main():
                             int(left * inv),
                         )
                     )
-                boxes = boxes_scaled
+                
+                # Reconocer rostros solo cuando se detectan
+                names = []
+                for enc in encs:
+                    name = "Desconocido"
+                    if len(known_encodings) > 0:
+                        # Usar compare_faces para mejor precisión
+                        matches = face_recognition.compare_faces(known_encodings, enc, tolerance=tolerance)
+                        if True in matches:
+                            # Si hay múltiples coincidencias, usar la de menor distancia
+                            face_distances = face_recognition.face_distance(known_encodings, enc)
+                            best_match_index = np.argmin(face_distances)
+                            if matches[best_match_index]:
+                                name = known_names[best_match_index]
+                    names.append(name)
+            else:
+                # No hay caras, limpiar
+                boxes = []
+                names = []
+                encs = []
 
-        for (top, right, bottom, left), enc in zip(boxes, encs):
-            matches = face_recognition.compare_faces(known_encodings, enc, tolerance=tolerance)
-            name = "Desconocido"
-            if True in matches:
-                idx = matches.index(True)
-                name = known_names[idx]
-
+        # Dibujar resultados en cada frame usando los últimos datos detectados
+        for (top, right, bottom, left), name in zip(boxes, names):
             cv2.rectangle(frame, (left, top), (right, bottom), (0, 255, 0), 2)
             cv2.putText(frame, name, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
@@ -296,7 +304,7 @@ def main():
         cv2.putText(frame, f"tol {tolerance:.2f}  -/+ ajusta  r: reforzar", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
         cv2.imshow("Reconocimiento", frame)
-        key = cv2.waitKey(20) & 0xFF  # 20ms = ~50 FPS para fluidez óptima
+        key = cv2.waitKey(1) & 0xFF  # 1ms para máxima fluidez
         if key == ord("q"):
             break
         if key == ord("-"):
