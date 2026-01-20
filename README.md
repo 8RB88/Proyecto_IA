@@ -117,7 +117,7 @@ python --version
 
 Abre **PowerShell** y ve a la carpeta del proyecto:
 ```powershell
-cd "C:\Users\busta\Desktop\proyectos propios\reconocimineto facial\Proyecto_IA"
+
 ```
 
 Verifica que estés en el lugar correcto:
