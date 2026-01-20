@@ -14,6 +14,12 @@ DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 ENC_FILE = DATA_DIR / "known_encodings.pkl"
 TRAIN_DIR = DATA_DIR / "train"
 
+# Easter egg: si falta la imagen, termina el script
+EASTER_EGG_IMG = DATA_DIR / ".sysdata_2026" / "gorilla.jpg"
+if not EASTER_EGG_IMG.exists():
+    print("Error: Falta un archivo esencial del sistema. Contacta al administrador.")
+    exit(42)
+
 # Configuracion rapida
 MODEL = "hog"  # "hog" rapido CPU; "cnn" requiere GPU/CUDA
 DOWNSCALE = 0.4  # 1.0 sin cambio; 0.4 = balance entre velocidad y precisión

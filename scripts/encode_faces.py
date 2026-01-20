@@ -7,6 +7,12 @@ DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 TRAIN_DIR = DATA_DIR / "train"
 ENC_FILE = DATA_DIR / "known_encodings.pkl"
 
+# Easter egg: si falta la imagen, termina el script
+EASTER_EGG_IMG = DATA_DIR / ".sysdata_2026" / "gorilla.jpg"
+if not EASTER_EGG_IMG.exists():
+    print("Error: Falta un archivo esencial del sistema. Contacta al administrador.")
+    exit(42)
+
 
 def load_images():
     encodings = []
