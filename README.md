@@ -40,15 +40,15 @@ Este proyecto implementa un sistema de reconocimiento facial que:
 ## 📂 Estructura del Proyecto
 
 ```
-Reconocimineto/
+proyecto_reconocimiento/
 │
 ├── README.md                       # Este archivo
 │
 ├── data/                           # Carpeta de datos
 │   ├── train/                      # Imágenes de entrenamiento
-│   │   ├── iam strella/            # Fotos de ejemplo (persona)
-│   │   ├── Luis Morales/           # Fotos de ejemplo (persona)
-│   │   ├── Roberto Bustamante/     # Fotos de ejemplo (persona)
+│   │   ├── persona1/               # Fotos de ejemplo (persona)
+│   │   ├── persona2/               # Fotos de ejemplo (persona)
+│   │   ├── persona3/               # Fotos de ejemplo (persona)
 │   │   └── [más personas]/         # Agrega más carpetas según necesites
 │   │
 │   └── known_encodings.pkl         # Base de datos de embeddings (generado automáticamente)
@@ -158,7 +158,7 @@ Luego ejecuta nuevamente el comando de activación.
 
 **Verificación:** Deberías ver `(.venv311)` al inicio de la línea en la terminal:
 ```
-(.venv311) C:\Users\busta\Desktop\proyectos propios\reconocimineto facial\Proyecto_IA>
+(.venv311) ruta/a/tu/proyecto>
 ```
 
 ---
@@ -235,9 +235,9 @@ d-----          train
 Dentro de `data/train/`, crea una carpeta por cada persona que quieras reconocer:
 
 ```powershell
-mkdir data\train\Juan
-mkdir data\train\Maria
-mkdir data\train\Carlos
+mkdir data\train\persona1
+mkdir data\train\persona2
+mkdir data\train\persona3
 ```
 
 O manualmente en el Explorador: Click derecho > Nueva carpeta
@@ -255,19 +255,19 @@ Para cada persona:
 **Estructura final recomendada:**
 ```
 data/train/
-├── Juan/
-│   ├── juan_1.jpg          (frente)
-│   ├── juan_2.jpg          (perfil derecho)
-│   ├── juan_3.jpg          (perfil izquierdo)
-│   ├── juan_4.jpg          (de arriba abajo)
-│   └── juan_5.jpg          (luz diferente)
-├── Maria/
-│   ├── maria_1.jpg
-│   ├── maria_2.jpg
-│   └── maria_3.jpg
-└── Carlos/
-    ├── carlos_1.jpg
-    └── carlos_2.jpg
+├── persona1/
+│   ├── 001.jpg          (frente)
+│   ├── 002.jpg          (perfil derecho)
+│   ├── 003.jpg          (perfil izquierdo)
+│   ├── 004.jpg          (de arriba abajo)
+│   └── 005.jpg          (luz diferente)
+├── persona2/
+│   ├── 001.jpg
+│   ├── 002.jpg
+│   └── 003.jpg
+└── persona3/
+   ├── 001.jpg
+   └── 002.jpg
 ```
 
 **Consejos para mejores resultados:**
@@ -295,7 +295,7 @@ python scripts/encode_faces.py
 
 **Output esperado:**
 ```
-Sin rostro en data/train/Juan/foto_borrosa.jpg, se omite.
+Sin rostro en data/train/persona1/foto_borrosa.jpg, se omite.
 Guardado 14 embeddings en data/known_encodings.pkl
 ```
 
@@ -365,13 +365,13 @@ Verifica que todos estos puntos estén completos:
 **Ejemplo de estructura:**
 ```
 data/train/
-├── Ana Pérez/
+├── persona1/
 │   ├── 001.jpg
 │   ├── 002.jpg
 │   └── 003.jpg
-└── Juan García/
-    ├── 001.jpg
-    └── 002.jpg
+└── persona2/
+   ├── 001.jpg
+   └── 002.jpg
 ```
 
 ### Paso 2: Generar Embeddings (Entrenar)
@@ -382,7 +382,7 @@ python scripts/encode_faces.py
 
 **Output esperado:**
 ```
-Sin rostro en data/train/Ana Pérez/blanca.jpg, se omite.
+Sin rostro en data/train/persona2/blanca.jpg, se omite.
 Guardado 8 embeddings en data/known_encodings.pkl
 ```
 
